@@ -1,3 +1,6 @@
 node_modules
 .env
 test.py
+models
+google-oauth.json
+token.json

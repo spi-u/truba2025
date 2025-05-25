@@ -1,0 +1,87 @@
+version: '3.7'
+
+services:
+  app:
+    container_name: bot
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      target: development
+    environment:
+      NODE_ENV: development
+      AGENT_WS_URL: ws://agent-core:8765
+    env_file:
+      - .env
+    volumes:
+      - ./client/src:/app/src
+      - ./client/nodemon.json:/app/nodemon.json
+    command: npm run start:dev
+    depends_on:
+      - db
+      - agent-core
+      # - pgadmin
+    ports:
+      - "5000:5000"
+    networks:
+      - app
+  db:
+    container_name: bot-db
+    image: postgres:16
+    env_file:
+      - .env
+    environment:
+      PG_DATA: /var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    volumes:
+      - botdb-dev-data:/var/lib/postgresql/data
+    networks:
+      - app
+  # pgadmin:
+  #   container_name: pgadmin
+  #   image: dpage/pgadmin4
+  #   env_file:
+  #     - .env
+  #   ports:
+  #     - "5050:80"
+  #   volumes:
+  #     - pgadmin-dev-data:/var/lib/pgadmin
+  #   depends_on:
+  #     - db
+  #   networks:
+  #     - app
+
+  vosk:
+    build:
+      context: .
+      dockerfile: Dockerfile.vosk
+    ports:
+      - "2700:2700"
+    networks:
+      - app
+      
+  agent-core:
+    container_name: agent-core
+    build:
+      context: .
+      dockerfile: agent-core/Dockerfile
+    environment:
+      - PYTHONUNBUFFERED=1
+    env_file:
+      - .env
+    volumes:
+      - ./agent-core:/app
+    ports:
+      - "8765:8765"
+    networks:
+      - app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  
+
+volumes:
+  botdb-dev-data:
+  pgadmin-dev-data:
+
+networks:
+  app:
+    driver: bridge
